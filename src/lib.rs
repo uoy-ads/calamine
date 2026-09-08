@@ -1193,6 +1193,17 @@ impl<T: CellType> Range<T> {
         }
     }
 
+    /// Get an owned iterator over the rows of a `Range`.
+    ///
+    /// Consumes the `Range` and yields owned `Vec<T>` rows.
+    pub fn into_rows(self) -> IntoRows<T> {
+        let width = self.width();
+        IntoRows {
+            width,
+            inner: self.inner.into_iter(),
+        }
+    }
+
     /// Get an iterator over the used cells in a `Range`.
     ///
     /// This method returns an iterator over the used cells in a range. The
@@ -1571,6 +1582,24 @@ impl<T: CellType> IndexMut<(usize, usize)> for Range<T> {
     }
 }
 
+impl<T: CellType> IntoIterator for Range<T> {
+    type Item = Vec<T>;
+    type IntoIter = IntoRows<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.into_rows()
+    }
+}
+
+impl<'a, T: CellType> IntoIterator for &'a Range<T> {
+    type Item = &'a [T];
+    type IntoIter = Rows<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.rows()
+    }
+}
+
 // -----------------------------------------------------------------------
 // Range Iterators.
 // -----------------------------------------------------------------------
@@ -1780,6 +1809,55 @@ impl<'a, T: 'a + CellType> DoubleEndedIterator for Rows<'a, T> {
 }
 
 impl<'a, T: 'a + CellType> ExactSizeIterator for Rows<'a, T> {}
+
+
+#[derive(Clone, Debug)]
+pub struct IntoRows<T: CellType> {
+    width: usize,
+    inner: std::vec::IntoIter<T>
+}
+
+impl<T: CellType> Iterator for IntoRows<T> {
+    type Item = Vec<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.width == 0 || self.inner.len() == 0 {
+            None
+        } else {
+            let mut row = Vec::with_capacity(self.width);
+            for _ in 0..self.width {
+                row.push(self.inner.next()?);
+            }
+            Some(row)
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        if self.width == 0 {
+            (0, Some(0))
+        } else {
+            let len = self.inner.len() / self.width;
+            (len, Some(len))
+        }
+    }
+}
+
+impl<T: CellType> DoubleEndedIterator for IntoRows<T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.width == 0 || self.inner.len() == 0 {
+            None
+        } else {
+            let mut row = Vec::with_capacity(self.width);
+            for _ in 0..self.width {
+                row.push(self.inner.next_back()?);
+            }
+            row.reverse();
+            Some(row)
+        }
+    }
+}
+
+impl<T: CellType> ExactSizeIterator for IntoRows<T> {}
 
 // -----------------------------------------------------------------------
 // The `Table` struct.
