@@ -1,3 +1,7 @@
+# uoy-ads fork
+Quick and dirty fork that implements `IntoIter` on rows (via `into_rows()`) on 
+a `Range` data to allow ownership/moves on `Data` (and `DataRef` if ever used).
+
 # calamine
 
 An Excel/OpenDocument Spreadsheets file reader/deserializer, in pure Rust.
